@@ -37,8 +37,12 @@ export default async function handler(request, response) {
     });
 
     if (!upstream.ok) {
-      return response.status(502).json({ error: 'MEMO_SERVICE_UNAVAILABLE' });
-    }
+  console.error('Supabase memo request failed:', {
+    status: upstream.status,
+  });
+
+  return response.status(502).json({ error: 'MEMO_SERVICE_UNAVAILABLE' });
+}
 
     const rows = await upstream.json();
 
@@ -53,7 +57,11 @@ export default async function handler(request, response) {
     }));
 
     return response.status(200).json({ notes });
-  } catch {
+    } catch (error) {
+    console.error('Memo service error:', {
+      name: error?.name || 'UnknownError',
+    });
+
     return response.status(502).json({ error: 'MEMO_SERVICE_UNAVAILABLE' });
   }
 }
