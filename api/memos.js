@@ -30,7 +30,6 @@ export default async function handler(request, response) {
       method: 'GET',
       headers: {
         apikey: secretKey,
-        Authorization: `Bearer ${secretKey}`,
         Accept: 'application/json',
       },
       cache: 'no-store',
