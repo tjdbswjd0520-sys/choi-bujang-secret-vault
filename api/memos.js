@@ -37,8 +37,12 @@ export default async function handler(request, response) {
     });
 
     if (!upstream.ok) {
+  const errorBody = await upstream.json().catch(() => ({}));
+
   console.error('Supabase memo request failed:', {
     status: upstream.status,
+    code: errorBody.code || 'UNKNOWN',
+    message: errorBody.message || 'No error message',
   });
 
   return response.status(502).json({ error: 'MEMO_SERVICE_UNAVAILABLE' });
