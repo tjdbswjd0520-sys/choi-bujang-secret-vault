@@ -17,24 +17,34 @@ function getLoginVerifier(secretKey) {
   return cachedVerifier;
 }
 
+function sendError(response, status, error) {
+  return response.status(status).json({ error });
+}
+
+function isUuid(value) {
+  return typeof value === 'string'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+function isValidText(value, maxLength = 2000) {
+  return typeof value === 'string'
+    && value.trim().length > 0
+    && value.length <= maxLength;
+}
+
 export default async function handler(request, response) {
   response.setHeader('Cache-Control', 'no-store');
 
-  // 메모 조회는 GET 요청만 허용합니다.
-  if (request.method !== 'GET') {
-    response.setHeader('Allow', 'GET');
-    return response.status(405).json({
-      error: 'METHOD_NOT_ALLOWED',
-    });
+  if (!['GET', 'POST'].includes(request.method)) {
+    response.setHeader('Allow', 'GET, POST');
+    return sendError(response, 405, 'METHOD_NOT_ALLOWED');
   }
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const secretKey = process.env.SUPABASE_SECRET_KEY;
 
   if (!supabaseUrl || !secretKey) {
-    return response.status(500).json({
-      error: 'SERVER_CONFIGURATION_ERROR',
-    });
+    return sendError(response, 500, 'SERVER_CONFIGURATION_ERROR');
   }
 
   try {
@@ -42,81 +52,100 @@ export default async function handler(request, response) {
     const identityUrl = new URL(config.identityProvider.issuer);
 
     if (
-      baseUrl.protocol !== 'https:' ||
-      baseUrl.origin !== identityUrl.origin
+      baseUrl.protocol !== 'https:'
+      || baseUrl.origin !== identityUrl.origin
     ) {
-      return response.status(500).json({
-        error: 'SERVER_CONFIGURATION_ERROR',
-      });
+      return sendError(response, 500, 'SERVER_CONFIGURATION_ERROR');
     }
 
-    // 브라우저가 보낸 로그인 증명서를 서버에서 직접 검사합니다.
     const verifyLoginAuthorization = getLoginVerifier(secretKey);
     const verifiedUser = await verifyLoginAuthorization(
-      request.headers.authorization
+      request.headers.authorization,
     );
 
-    // 정상적으로 인증된 학생 계정이 아니면 거부합니다.
     if (!verifiedUser || verifiedUser.kind !== 'student') {
-      return response.status(401).json({
-        error: 'AUTHENTICATION_REQUIRED',
-      });
+      return sendError(response, 401, 'AUTHENTICATION_REQUIRED');
     }
 
-    // 로그인 확인이 끝난 뒤에만 메모를 조회합니다.
     const endpoint = new URL('/rest/v1/learning_memos', baseUrl);
 
-    endpoint.search = new URLSearchParams({
-      select: 'title,content,created_at',
-      order: 'created_at.asc',
-    }).toString();
+    const headers = {
+      apikey: secretKey,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    if (request.method === 'GET') {
+      endpoint.search = new URLSearchParams({
+        select: 'id,title,content,created_at',
+        owner_id: `eq.${verifiedUser.userId}`,
+        order: 'created_at.asc',
+      }).toString();
+
+      const upstream = await fetch(endpoint, {
+        method: 'GET',
+        headers,
+        cache: 'no-store',
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (!upstream.ok) {
+        return sendError(response, 502, 'MEMO_SERVICE_UNAVAILABLE');
+      }
+
+      const rows = await upstream.json();
+
+      if (!Array.isArray(rows)) {
+        return sendError(response, 502, 'INVALID_MEMO_RESPONSE');
+      }
+
+      const notes = rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        body: row.content,
+        created_at: row.created_at,
+      }));
+
+      return response.status(200).json({ notes });
+    }
+
+    const { id, title, body } = request.body || {};
+
+    if (
+      (id !== undefined && !isUuid(id))
+      || !isValidText(title, 200)
+      || !isValidText(body)
+    ) {
+      return sendError(response, 400, 'INVALID_MEMO');
+    }
+
+    const memoId = id || crypto.randomUUID();
 
     const upstream = await fetch(endpoint, {
-      method: 'GET',
+      method: 'POST',
       headers: {
-        apikey: secretKey,
-        Accept: 'application/json',
+        ...headers,
+        Prefer: 'return=minimal',
       },
-      cache: 'no-store',
+      body: JSON.stringify({
+        id: memoId,
+        owner_id: verifiedUser.userId,
+        title: title.trim(),
+        content: body.trim(),
+      }),
       signal: AbortSignal.timeout(10000),
     });
 
     if (!upstream.ok) {
-      const errorBody = await upstream.json().catch(() => ({}));
-
-      console.error('Supabase memo request failed:', {
-        status: upstream.status,
-        code: errorBody.code || 'UNKNOWN',
-        message: errorBody.message || 'No error message',
-      });
-
-      return response.status(502).json({
-        error: 'MEMO_SERVICE_UNAVAILABLE',
-      });
+      return sendError(response, 502, 'MEMO_SERVICE_UNAVAILABLE');
     }
 
-    const rows = await upstream.json();
-
-    if (!Array.isArray(rows)) {
-      return response.status(502).json({
-        error: 'INVALID_MEMO_RESPONSE',
-      });
-    }
-
-    const notes = rows.map((row) => ({
-      title: row.title,
-      content: row.content,
-      created_at: row.created_at,
-    }));
-
-    return response.status(200).json({ notes });
+    return response.status(201).json({ id: memoId });
   } catch (error) {
     console.error('Memo service error:', {
       name: error?.name || 'UnknownError',
     });
 
-    return response.status(502).json({
-      error: 'MEMO_SERVICE_UNAVAILABLE',
-    });
+    return sendError(response, 502, 'MEMO_SERVICE_UNAVAILABLE');
   }
 }

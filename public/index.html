@@ -105,10 +105,36 @@
     <div class="notice">
       로그인한 사용자만 서버 API를 통해 가상 자료를 조회할 수 있습니다.
     </div>
+<section id="memo-editor" hidden>
+  <h2>가상 메모 관리</h2>
 
-    <ul id="notes" aria-live="polite">
-      <li>가상 자료를 불러오는 중입니다.</li>
-    </ul>
+  <form id="memo-form">
+    <label for="memo-title">메모 제목</label>
+    <input
+      id="memo-title"
+      type="text"
+      maxlength="200"
+      required
+    >
+
+    <label for="memo-body">메모 내용</label>
+    <textarea
+      id="memo-body"
+      maxlength="2000"
+      rows="4"
+      required
+    ></textarea>
+
+    <button id="memo-submit" type="submit">메모 추가</button>
+    <button id="memo-cancel" type="button" hidden>수정 취소</button>
+  </form>
+
+  <p id="memo-message" role="status" aria-live="polite"></p>
+</section>
+
+<ul id="notes" aria-live="polite">
+  <li>가상 자료를 불러오는 중입니다.</li>
+</ul>
   </main>
 
   <script type="module">
@@ -132,6 +158,16 @@
     const sessionPanel = document.querySelector('#session-panel');
     const userEmail = document.querySelector('#user-email');
     const authMessage = document.querySelector('#auth-message');
+    const memoEditor = document.querySelector('#memo-editor');
+    const memoForm = document.querySelector('#memo-form');
+    const memoTitle = document.querySelector('#memo-title');
+    const memoBody = document.querySelector('#memo-body');
+    const memoSubmit = document.querySelector('#memo-submit');
+    const memoCancel = document.querySelector('#memo-cancel');
+    const memoMessage = document.querySelector('#memo-message');
+
+    let editingMemoId = null;
+    let currentAccessToken = null;
 
     function showMessage(message, kind = 'info') {
       authMessage.textContent = message;
@@ -139,15 +175,24 @@
     }
 
     function updateLoginScreen(session) {
-      const user = session?.user ?? null;
+  const user = session?.user ?? null;
 
-      loginForm.hidden = Boolean(user);
-      sessionPanel.hidden = !user;
+  currentAccessToken = session?.access_token ?? null;
 
-      if (user) {
-        userEmail.textContent = user.email || '이메일 정보 없음';
-      }
-    }
+  loginForm.hidden = Boolean(user);
+  sessionPanel.hidden = !user;
+  memoEditor.hidden = !user;
+
+  if (user) {
+    userEmail.textContent = user.email || '이메일 정보 없음';
+  } else {
+    editingMemoId = null;
+    memoForm.reset();
+    memoCancel.hidden = true;
+    memoSubmit.textContent = '메모 추가';
+    memoMessage.textContent = '';
+  }
+}
 
     // 로그인 상태가 바뀌면 화면과 메모도 함께 바꿉니다.
 supabase.auth.onAuthStateChange((event, session) => {
@@ -240,6 +285,131 @@ if (sessionError) {
         logoutButton.disabled = false;
       }
     });
+
+function startEditingMemo(note) {
+  editingMemoId = note.id;
+
+  memoTitle.value = note.title;
+  memoBody.value = note.body;
+
+  memoSubmit.textContent = '메모 수정';
+  memoCancel.hidden = false;
+
+  memoMessage.textContent = '메모를 수정하고 저장해 주세요.';
+
+  memoTitle.focus();
+}
+
+memoForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  if (!currentAccessToken) {
+    memoMessage.textContent = '로그인이 필요합니다.';
+    return;
+  }
+
+  const title = memoTitle.value.trim();
+  const body = memoBody.value.trim();
+
+  if (!title || !body) {
+    memoMessage.textContent = '제목과 내용을 모두 입력해 주세요.';
+    return;
+  }
+
+  memoSubmit.disabled = true;
+  memoMessage.textContent = '저장 중입니다.';
+
+  try {
+    const isEditing = editingMemoId !== null;
+
+    const url = isEditing
+      ? `/api/memos/${encodeURIComponent(editingMemoId)}`
+      : '/api/memos';
+
+    const response = await fetch(url, {
+      method: isEditing ? 'PUT' : 'POST',
+      headers: {
+        Authorization: `Bearer ${currentAccessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title, body }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || '메모 저장에 실패했습니다.');
+    }
+
+    memoForm.reset();
+    editingMemoId = null;
+    memoSubmit.textContent = '메모 추가';
+    memoCancel.hidden = true;
+
+    memoMessage.textContent = isEditing
+      ? '메모를 수정했습니다.'
+      : '새 메모를 추가했습니다.';
+
+    await loadMemos(currentAccessToken);
+  } catch (error) {
+    memoMessage.textContent =
+      error.message || '메모 저장 중 오류가 발생했습니다.';
+  } finally {
+    memoSubmit.disabled = false;
+  }
+});
+
+memoCancel.addEventListener('click', () => {
+  editingMemoId = null;
+  memoForm.reset();
+
+  memoSubmit.textContent = '메모 추가';
+  memoCancel.hidden = true;
+  memoMessage.textContent = '수정을 취소했습니다.';
+});
+
+async function deleteMemo(id) {
+  if (!currentAccessToken) {
+    memoMessage.textContent = '로그인이 필요합니다.';
+    return;
+  }
+
+  if (!confirm('이 메모를 삭제하시겠습니까?')) {
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      `/api/memos/${encodeURIComponent(id)}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${currentAccessToken}`,
+        },
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || '메모 삭제에 실패했습니다.');
+    }
+
+    if (editingMemoId === id) {
+      editingMemoId = null;
+      memoForm.reset();
+      memoSubmit.textContent = '메모 추가';
+      memoCancel.hidden = true;
+    }
+
+    memoMessage.textContent = '메모를 삭제했습니다.';
+    await loadMemos(currentAccessToken);
+  } catch (error) {
+    memoMessage.textContent =
+      error.message || '메모 삭제 중 오류가 발생했습니다.';
+  }
+}
+
 async function loadMemos(accessToken) {
   const list = document.querySelector('#notes');
 
@@ -268,24 +438,46 @@ async function loadMemos(accessToken) {
 
     const cards = data.notes.map((note) => {
       if (
+        typeof note.id !== 'string' ||
         typeof note.title !== 'string' ||
-        typeof note.content !== 'string'
+        typeof note.body !== 'string'
       ) {
         throw new Error('가상 자료 형식이 올바르지 않습니다.');
       }
 
       const item = document.createElement('li');
       const title = document.createElement('strong');
-      const content = document.createElement('span');
+      const content = document.createElement('p');
+      const editButton = document.createElement('button');
+      const deleteButton = document.createElement('button');
 
       title.textContent = note.title;
-      content.textContent = note.content;
-      item.append(title, content);
+      content.textContent = note.body;
+
+      editButton.type = 'button';
+      editButton.textContent = '수정';
+      editButton.addEventListener('click', () => {
+        startEditingMemo(note);
+      });
+
+      deleteButton.type = 'button';
+      deleteButton.textContent = '삭제';
+      deleteButton.addEventListener('click', () => {
+        deleteMemo(note.id);
+      });
+
+      item.append(title, content, editButton, deleteButton);
 
       return item;
     });
 
     list.replaceChildren(...cards);
+
+    if (cards.length === 0) {
+      const item = document.createElement('li');
+      item.textContent = '등록된 메모가 없습니다. 새 메모를 추가해 보세요.';
+      list.append(item);
+    }
   } catch (error) {
     const item = document.createElement('li');
     item.textContent =
