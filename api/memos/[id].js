@@ -77,6 +77,7 @@ export default async function handler(request, response) {
     endpoint.search = new URLSearchParams({
       select: 'id,title,content,created_at',
       id: `eq.${memoId}`,
+      owner_id: `eq.${verifiedUser.id}`,
     }).toString();
 
     const headers = {
