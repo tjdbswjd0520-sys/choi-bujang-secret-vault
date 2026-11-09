@@ -1,5 +1,7 @@
-async function fetchWithTimeout(url) {
+
+async function fetchWithTimeout(url, options = {}) {
   return fetch(url, {
+    ...options,
     redirect: 'error',
     signal: AbortSignal.timeout(10000),
     cache: 'no-store',
@@ -31,7 +33,7 @@ function validateAppUrl(config) {
 }
 
 export async function runAttackChecks(config) {
-  if (![1, 2].includes(config.step)) {
+  if (![1, 2, 3].includes(config.step)) {
     throw new Error('현재 단계의 공격 점검을 구현해 주세요.');
   }
 
@@ -63,6 +65,86 @@ export async function runAttackChecks(config) {
         ? '비로그인 요청에서 공개 가상 메모 확인 표시가 보임'
         : `비로그인 요청에서 확인 표시가 보이지 않음 (HTTP ${response.status})`,
     }];
+  }
+
+  if (config.step === 3) {
+    const memoId = 'a1111111-1111-4111-8111-111111111111';
+    const requests = [
+      {
+        attackId: 'anonymous_memo_list',
+        method: 'GET',
+        url: '/api/memos',
+      },
+      {
+        attackId: 'anonymous_memo_create',
+        method: 'POST',
+        url: '/api/memos',
+        body: {
+          title: '비로그인 공격 점검용',
+          body: '저장되면 안 되는 가상 자료',
+        },
+      },
+      {
+        attackId: 'anonymous_memo_read',
+        method: 'GET',
+        url: `/api/memos/${memoId}`,
+      },
+      {
+        attackId: 'anonymous_memo_update',
+        method: 'PUT',
+        url: `/api/memos/${memoId}`,
+        body: {
+          title: '변경 시도',
+          body: '수정되면 안 되는 가상 자료',
+        },
+      },
+      {
+        attackId: 'anonymous_memo_delete',
+        method: 'DELETE',
+        url: `/api/memos/${memoId}`,
+      },
+    ];
+
+    const results = [];
+
+    for (const item of requests) {
+      let status = 0;
+
+      try {
+        const response = await fetchWithTimeout(
+          new URL(item.url, app),
+          {
+            method: item.method,
+            headers: item.body
+              ? { 'Content-Type': 'application/json' }
+              : {},
+            ...(item.body ? { body: JSON.stringify(item.body) } : {}),
+          },
+        );
+
+        status = response.status;
+      } catch {
+        status = 0;
+      }
+
+      const blocked = status === 401 || status === 403;
+
+      results.push({
+        attackId: item.attackId,
+        expected: '비로그인 요청은 HTTP 401 또는 403으로 거부',
+        observed: blocked
+          ? `인증되지 않은 요청이 차단됨 (HTTP ${status})`
+          : `요청이 차단되지 않았거나 응답을 확인할 수 없음 (HTTP ${status || '요청 실패'})`,
+      });
+
+      if (!blocked) {
+        throw new Error(
+          `${item.attackId} 공격 점검 실패: HTTP ${status || '요청 실패'}`,
+        );
+      }
+    }
+
+    return results;
   }
 
   let staticMemoExposed = false;
