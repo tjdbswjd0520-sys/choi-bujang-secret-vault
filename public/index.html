@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="ko">
 <head>
@@ -10,60 +11,296 @@
     main { max-width: 760px; margin: 0 auto; padding: 44px 22px 64px; }
     .eyebrow { color: #8ad8df; font-size: 14px; font-weight: 700; letter-spacing: .08em; }
     h1 { margin: 16px 0; font-size: clamp(30px, 7vw, 48px); line-height: 1.2; }
+    h2 { margin-top: 0; }
     p { font-size: 17px; line-height: 1.7; color: #bfd0e5; }
     .notice { margin: 26px 0; padding: 18px; border: 1px solid #d07384; border-radius: 14px; color: #ffe3e8; background: #612a3544; }
     ul { list-style: none; display: grid; gap: 12px; padding: 0; }
     li { border: 1px solid #51667c; border-radius: 14px; padding: 17px 19px; background: #1a2a3d; }
     strong { display: block; font-size: 18px; margin-bottom: 5px; }
     li span { color: #bfd0e5; }
+
+    .auth-box {
+      margin: 28px 0;
+      padding: 22px;
+      border: 1px solid #51667c;
+      border-radius: 14px;
+      background: #1a2a3d;
+    }
+    .auth-box p { font-size: 15px; }
+    .field { display: grid; gap: 8px; margin: 16px 0; }
+    .field label { color: #bfd0e5; font-size: 14px; }
+    .field input {
+      box-sizing: border-box;
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #71869c;
+      border-radius: 8px;
+      background: #101a28;
+      color: #ecf4ff;
+      font: inherit;
+    }
+    button {
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 8px;
+      background: #287c91;
+      color: white;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    [hidden] { display: none !important; }
+    #auth-message { min-height: 24px; margin-bottom: 0; }
+    #auth-message[data-kind="error"] { color: #ff9eac; }
+    #auth-message[data-kind="success"] { color: #8fe2b1; }
   </style>
 </head>
 <body>
   <main>
-    <div class="eyebrow">BYTE BACK · 2단계 자료 조회</div>
+    <div class="eyebrow">BYTE BACK · 3단계 로그인 연습</div>
     <h1>점령된 자료실</h1>
+
+    <section class="auth-box" aria-labelledby="auth-title">
+      <h2 id="auth-title">자료실 로그인</h2>
+      <p>등록된 A 계정의 이메일과 비밀번호로 로그인하세요.</p>
+
+      <form id="login-form">
+        <div class="field">
+          <label for="email">이메일</label>
+          <input
+            id="email"
+            type="email"
+            autocomplete="username"
+            required
+          >
+        </div>
+
+        <div class="field">
+          <label for="password">비밀번호</label>
+          <input
+            id="password"
+            type="password"
+            autocomplete="current-password"
+            required
+          >
+        </div>
+
+        <button id="login-button" type="submit">로그인</button>
+      </form>
+
+      <div id="session-panel" hidden>
+        <p>현재 로그인한 계정</p>
+        <strong id="user-email"></strong>
+        <button id="logout-button" type="button">로그아웃</button>
+      </div>
+
+      <p id="auth-message" role="status" aria-live="polite">
+        로그인하지 않았습니다.
+      </p>
+    </section>
+
     <p>아래 기록은 실습을 위해 만든 가상 자료입니다. 브라우저가 서버 API를 통해 자료를 요청합니다.</p>
-    <div class="notice">주의: 자료 조회 API에는 아직 로그인 인증이 없습니다. 누구나 API 주소를 직접 요청할 수 있으므로 비공개 자료를 이 방식으로 제공하면 안 됩니다.</div>
-    <ul id="notes" aria-live="polite"><li>가상 자료를 불러오는 중입니다.</li></ul>
+
+    <div class="notice">
+      로그인한 사용자만 서버 API를 통해 가상 자료를 조회할 수 있습니다.
+    </div>
+
+    <ul id="notes" aria-live="polite">
+      <li>가상 자료를 불러오는 중입니다.</li>
+    </ul>
   </main>
+
   <script type="module">
-    const list = document.querySelector('#notes');
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2';
 
-    try {
-      const response = await fetch('/api/memos', { cache: 'no-store' });
+    // Supabase 공개 연결 정보
+    const SUPABASE_URL = 'https://dimfuboksglkwfrotuoa.supabase.co';
+    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ibC2s0t9oFE_Tu-DW4H41w_EmnzcNfr';
 
-      if (!response.ok) {
-        throw new Error('가상 자료를 불러오지 못했습니다.');
+    // Supabase 공식 SDK로 로그인 기능 연결
+    const supabase = createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+
+    const loginForm = document.querySelector('#login-form');
+    const emailInput = document.querySelector('#email');
+    const passwordInput = document.querySelector('#password');
+    const loginButton = document.querySelector('#login-button');
+    const logoutButton = document.querySelector('#logout-button');
+    const sessionPanel = document.querySelector('#session-panel');
+    const userEmail = document.querySelector('#user-email');
+    const authMessage = document.querySelector('#auth-message');
+
+    function showMessage(message, kind = 'info') {
+      authMessage.textContent = message;
+      authMessage.dataset.kind = kind;
+    }
+
+    function updateLoginScreen(session) {
+      const user = session?.user ?? null;
+
+      loginForm.hidden = Boolean(user);
+      sessionPanel.hidden = !user;
+
+      if (user) {
+        userEmail.textContent = user.email || '이메일 정보 없음';
       }
+    }
 
-      const data = await response.json();
+    // 로그인 상태가 바뀌면 화면과 메모도 함께 바꿉니다.
+supabase.auth.onAuthStateChange((event, session) => {
+  updateLoginScreen(session);
 
-      if (!Array.isArray(data.notes)) {
-        throw new Error('가상 자료를 불러오지 못했습니다.');
-      }
+  if (event === 'SIGNED_IN' && session?.access_token) {
+    showMessage('로그인에 성공했습니다.', 'success');
 
-      const cards = data.notes.map((note) => {
-        if (typeof note.title !== 'string' || typeof note.content !== 'string') {
-          throw new Error('가상 자료를 불러오지 못했습니다.');
+    setTimeout(() => {
+      loadMemos(session.access_token);
+    }, 0);
+  }
+
+  if (event === 'SIGNED_OUT') {
+    clearMemos();
+    showMessage('로그아웃되었습니다.', 'success');
+  }
+});
+
+    // 페이지를 다시 열었을 때 기존 로그인 상태를 확인합니다.
+const { data: sessionData, error: sessionError } =
+  await supabase.auth.getSession();
+
+if (sessionError) {
+  showMessage(
+    `로그인 상태 확인 실패: ${sessionError.message}`,
+    'error'
+  );
+  clearMemos();
+} else {
+  const session = sessionData.session;
+
+  updateLoginScreen(session);
+
+  if (session?.access_token) {
+    loadMemos(session.access_token);
+  } else {
+    clearMemos();
+    showMessage('로그인하지 않았습니다.');
+  }
+}
+
+    // 이메일과 비밀번호로 로그인합니다.
+    loginForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      loginButton.disabled = true;
+      showMessage('로그인 확인 중입니다.');
+
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: emailInput.value.trim(),
+          password: passwordInput.value
+        });
+
+        if (error) {
+          showMessage(`로그인 실패: ${error.message}`, 'error');
+          return;
         }
 
-        const item = document.createElement('li');
-        const title = document.createElement('strong');
-        const content = document.createElement('span');
+        passwordInput.value = '';
+        showMessage('로그인에 성공했습니다.', 'success');
+      } catch (error) {
+        showMessage(
+          `로그인 중 오류가 발생했습니다: ${error.message}`,
+          'error'
+        );
+      } finally {
+        loginButton.disabled = false;
+      }
+    });
 
-        title.textContent = note.title;
-        content.textContent = note.content;
-        item.append(title, content);
+    // Supabase 공식 로그아웃 기능을 사용합니다.
+    logoutButton.addEventListener('click', async () => {
+      logoutButton.disabled = true;
+      showMessage('로그아웃 중입니다.');
 
-        return item;
-      });
+      try {
+        const { error } = await supabase.auth.signOut();
 
-      list.replaceChildren(...cards);
-    } catch {
-      const item = document.createElement('li');
-      item.textContent = '가상 자료를 불러오지 못했습니다. 서버 설정과 연결 상태를 확인해 주세요.';
-      list.replaceChildren(item);
+        if (error) {
+          showMessage(`로그아웃 실패: ${error.message}`, 'error');
+        }
+      } catch (error) {
+        showMessage(
+          `로그아웃 중 오류가 발생했습니다: ${error.message}`,
+          'error'
+        );
+      } finally {
+        logoutButton.disabled = false;
+      }
+    });
+async function loadMemos(accessToken) {
+  const list = document.querySelector('#notes');
+
+  try {
+    const response = await fetch('/api/memos', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      throw new Error('로그인이 확인되지 않았습니다. 다시 로그인해 주세요.');
     }
+
+    if (!response.ok) {
+      throw new Error('가상 자료를 불러오지 못했습니다.');
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data.notes)) {
+      throw new Error('가상 자료 응답 형식이 올바르지 않습니다.');
+    }
+
+    const cards = data.notes.map((note) => {
+      if (
+        typeof note.title !== 'string' ||
+        typeof note.content !== 'string'
+      ) {
+        throw new Error('가상 자료 형식이 올바르지 않습니다.');
+      }
+
+      const item = document.createElement('li');
+      const title = document.createElement('strong');
+      const content = document.createElement('span');
+
+      title.textContent = note.title;
+      content.textContent = note.content;
+      item.append(title, content);
+
+      return item;
+    });
+
+    list.replaceChildren(...cards);
+  } catch (error) {
+    const item = document.createElement('li');
+    item.textContent =
+      error.message || '가상 자료를 불러오지 못했습니다.';
+    list.replaceChildren(item);
+  }
+}
+
+function clearMemos() {
+  const list = document.querySelector('#notes');
+  const item = document.createElement('li');
+
+  item.textContent = '로그인하면 가상 자료를 확인할 수 있습니다.';
+  list.replaceChildren(item);
+}
   </script>
 </body>
 </html>
