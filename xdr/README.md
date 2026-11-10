@@ -49,3 +49,7 @@ node scripts/xdr-run.mjs brute-force
 - `xdr/alerts.log` 기록과 판정기 연결은 `respond.mjs` 같은 다른 파일에서 합니다. `decide.mjs` 는 판단 결과만 돌려줍니다.
 
 인터넷을 끈 상태에서 `npm run xdr:run -- <moduleKey>` 를 돌려도 같은 결과가 나오면 심판에서도 같은 결과가 나옵니다.
+
+## 6단계 확인 순서
+1. `npm run decider:test` 명령을 실행합니다.
+2. "등록 기기의 정상 요청"과 "미등록 기기의 가상 요청"이 모두 통과(Pass)하는지 확인합니다.

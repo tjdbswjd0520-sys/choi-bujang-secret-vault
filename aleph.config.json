@@ -1,20 +1,21 @@
 {
-  "step": 3,
+  "step": 6,
   "repoUrl": "https://github.com/tjdbswjd0520-sys/choi-bujang-secret-vault",
   "publicAppUrl": "https://choi-bujang-secret-vault-b4zg.vercel.app",
   "sampleMarker": "SAMPLE_NOTE_1",
   "judgeIssuer": "https://aleph-judge-production.up.railway.app/defense/judge",
   "identityProvider": {
-  "issuer": "https://dimfuboksglkwfrotuoa.supabase.co/auth/v1",
-  "jwksUrl": "https://dimfuboksglkwfrotuoa.supabase.co/auth/v1/.well-known/jwks.json",
-  "audience": "authenticated" },
+    "issuer": "https://dimfuboksglkwfrotuoa.supabase.co/auth/v1",
+    "jwksUrl": "https://dimfuboksglkwfrotuoa.supabase.co/auth/v1/.well-known/jwks.json",
+    "audience": "authenticated"
+  },
   "originalApiUrl": "https://dimfuboksglkwfrotuoa.supabase.co/rest/v1/learning_memos",
   "allowedRoutes": [
-  "GET /api/memos",
-  "POST /api/memos",
-  "GET /api/memos/[id]",
-  "PUT /api/memos/[i]d",
-  "DELETE /api/memos/[id]"
-],
+    "GET /api/memos",
+    "POST /api/memos",
+    "GET /api/memos/[id]",
+    "PUT /api/memos/[id]",
+    "DELETE /api/memos/[id]"
+  ],
   "restoreRoute": null
 }
