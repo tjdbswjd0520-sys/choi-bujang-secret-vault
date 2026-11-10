@@ -8,6 +8,7 @@
   "issuer": "https://dimfuboksglkwfrotuoa.supabase.co/auth/v1",
   "jwksUrl": "https://dimfuboksglkwfrotuoa.supabase.co/auth/v1/.well-known/jwks.json",
   "audience": "authenticated" },
+  "originalApiUrl": "https://dimfuboksglkwfrotuoa.supabase.co/rest/v1/learning_memos",
   "allowedRoutes": [
   "GET /api/memos",
   "POST /api/memos",
@@ -15,6 +16,5 @@
   "PUT /api/memos/:id",
   "DELETE /api/memos/:id"
 ],
-  "originalApiUrl": null,
   "restoreRoute": null
 }
