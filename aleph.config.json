@@ -12,6 +12,7 @@
   "originalApiUrl": "https://dimfuboksglkwfrotuoa.supabase.co/rest/v1/learning_memos",
   "allowedRoutes": [
     "GET /api/memos/:id",
+    "GET /api/notes/:id",
     "GET /api/notices",
     "GET /api/notices/:id"
   ]
