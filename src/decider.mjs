@@ -14,24 +14,21 @@ export async function decide(request) {
     };
   }
 
-  // 2. 새 로그인 검증(재인증) 뒤에는 허용
-  const isReauthenticated = Boolean(
-    request?.reauthenticated || 
-    request?.verified || 
-    request?.relogin || 
-    request?.signals?.reauthenticated
-  );
-  if (isReauthenticated) {
+  // 2. 계약된 재인증 검사: request.stepUp.verified 와 authAgeSeconds 검사
+  const stepUp = request?.stepUp;
+  const isStepUpVerified = Boolean(stepUp?.verified && typeof stepUp?.authAgeSeconds === 'number' && stepUp.authAgeSeconds >= 0);
+  
+  if (isStepUpVerified) {
     return {
       schema: 'aleph.decision.v1',
       requestId: request?.requestId,
       decision: 'allow',
-      reasonCode: 'approved_after_relogin',
-      ruleIds: ['device_registered'],
+      reasonCode: 'approved_after_step_up',
+      ruleIds: ['device_registered', 'step_up_required'],
     };
   }
 
-  // 3. 복합 이상 신호 검사: 시각·낯선 네트워크·다량 읽기가 "함께(AND)"일 때만 추가 확인
+  // 3. 복합 이상 신호 감지: 시각·낯선 네트워크·다량 읽기가 함께 발생할 때 step_up 판정
   const signals = request?.signals || {};
   const recentEvents = request?.recentEvents || [];
 
