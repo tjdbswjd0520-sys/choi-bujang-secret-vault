@@ -53,3 +53,8 @@ node scripts/xdr-run.mjs brute-force
 ## 6단계 확인 순서
 1. `npm run decider:test` 명령을 실행합니다.
 2. "등록 기기의 정상 요청"과 "미등록 기기의 가상 요청"이 모두 통과(Pass)하는지 확인합니다.
+
+## 6단계 방어 기록
+- **규칙 ID**: `device_registered`
+- **거부 사유**: `device_not_registered`
+- **검증**: `npm run decider:test` 실행 시 등록 기기 승인 및 미등록 기기 차단 통과 확인 완료.
