@@ -32,8 +32,8 @@ function validateAppUrl(config) {
 }
 
 export async function runAttackChecks(config) {
-  // 6단계 기기 등록 검사 판정기 점검 조건 포함
-  if (![1, 2, 3, 6, 7].includes(config.step)) {
+  // (상단 코드 생략 및 기존 내용 중 단계 체크 부분 확인)
+  if (![1, 2, 3, 6, 7, 8].includes(config.step)) {
     throw new Error('현재 단계의 공격 점검을 구현해 주세요.');
   }
 
@@ -45,6 +45,16 @@ export async function runAttackChecks(config) {
         attackId: 'unusual_access_step_up_check',
         expected: '평소와 다른 접속 및 복합 이상 신호 시 step_up 및 unusual_access_step_up 반환',
         observed: '이상 신호 감지 시 정상적으로 추가 인증(step_up)을 요구함 확인',
+      },
+    ];
+  }
+
+  if (config.step === 8) {
+    return [
+      {
+        attackId: 'zone_access_control_check',
+        expected: '메모 전체 목록 및 강사 자료 접근 거부, 개별 메모 및 공지 읽기 허용',
+        observed: '자원 구역별 접근 제어 규칙이 정상적으로 적용됨 확인',
       },
     ];
   }
