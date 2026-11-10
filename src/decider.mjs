@@ -68,12 +68,13 @@ export async function decide(request) {
     };
   }
 
-  // 4. 8단계 구역별 화이트리스트 접근 제어
+  // 4. 8단계 구역별 접근 제어 (경로 유연성 반영)
   const method = (request?.method || 'GET').toUpperCase();
-  const cleanPath = (request?.path || '').split('?')[0];
+  const rawPath = (request?.path || '').split('?')[0];
+  const parts = rawPath.split('/').filter(Boolean); // 예: ['api', 'notes', 'demo'] 또는 ['notes', 'demo']
 
   // (1) 강사 자료 및 관리 경로: 무조건 거부
-  if (cleanPath.startsWith('/api/instructor') || cleanPath.includes('/instructor')) {
+  if (rawPath.includes('instructor')) {
     return {
       schema: 'aleph.decision.v1',
       requestId: request?.requestId,
@@ -83,19 +84,16 @@ export async function decide(request) {
     };
   }
 
-  // (2) 공지사항(notices) 제어: GET /api/notices 또는 GET /api/notices/:id 만 허용 (쓰기 및 기타 메서드는 모두 거부)
-  if (cleanPath.startsWith('/api/notices')) {
+  // (2) 공지사항(notices): GET 읽기만 허용 (목록 또는 개별)
+  if (parts.includes('notices')) {
     if (method === 'GET') {
-      const parts = cleanPath.split('/').filter(Boolean); // ['api', 'notices', id?]
-      if (parts.length === 2 || parts.length === 3) {
-        return {
-          schema: 'aleph.decision.v1',
-          requestId: request?.requestId,
-          decision: 'allow',
-          reasonCode: 'approved_notice_read',
-          ruleIds: ['device_registered', 'zone_access_control'],
-        };
-      }
+      return {
+        schema: 'aleph.decision.v1',
+        requestId: request?.requestId,
+        decision: 'allow',
+        reasonCode: 'approved_notice_read',
+        ruleIds: ['device_registered', 'zone_access_control'],
+      };
     }
     return {
       schema: 'aleph.decision.v1',
@@ -106,11 +104,14 @@ export async function decide(request) {
     };
   }
 
-  // (3) 메모(memos / notes) 제어: GET /api/memos/:id 또는 GET /api/notes/:id 만 허용 (전체 목록 및 쓰기/기타 경로는 거부)
-  if (cleanPath.startsWith('/api/memos') || cleanPath.startsWith('/api/notes')) {
+  // (3) 메모(memos / notes): GET 방식이고 단일 ID가 지정된 경우만 허용
+  if (parts.includes('memos') || parts.includes('notes')) {
     if (method === 'GET') {
-      const parts = cleanPath.split('/').filter(Boolean); // ['api', 'memos', id] -> length === 3
-      if (parts.length === 3 && parts[2] !== '' && parts[2] !== 'export') {
+      const resourceIdx = parts.findIndex(p => p === 'memos' || p === 'notes');
+      const subParts = parts.slice(resourceIdx + 1); // 메모 경로 이후 조각들
+
+      // 조각이 1개이고(ID 지정), export 같은 기능 경로가 아니면 허용 (/notes/:id, /api/memos/:id 등)
+      if (subParts.length === 1 && subParts[0] !== '' && subParts[0] !== 'export') {
         return {
           schema: 'aleph.decision.v1',
           requestId: request?.requestId,
@@ -129,7 +130,7 @@ export async function decide(request) {
     };
   }
 
-  // (5) 그 외 알 수 없는 모든 경로는 거부
+  // (4) 그 외 알 수 없는 모든 경로는 거부
   return {
     schema: 'aleph.decision.v1',
     requestId: request?.requestId,
