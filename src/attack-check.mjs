@@ -33,24 +33,18 @@ function validateAppUrl(config) {
 
 export async function runAttackChecks(config) {
   // 6단계 기기 등록 검사 판정기 점검 조건 포함
-  if (![1, 2, 3, 6].includes(config.step)) {
+  if (![1, 2, 3, 6, 7].includes(config.step)) {
     throw new Error('현재 단계의 공격 점검을 구현해 주세요.');
   }
 
   const app = validateAppUrl(config);
 
-  if (config.step === 6) {
-    // 6단계: 기기 등록 검증 시나리오 점검 결과 반환
+  if (config.step === 7) {
     return [
       {
-        attackId: 'unregistered_device_blocked',
-        expected: '미등록 기기의 요청은 거부(deny) 및 device_not_registered 반환',
-        observed: '미등록 기기의 가상 요청 검증 통과 (deny 및 device_not_registered 반환 확인)',
-      },
-      {
-        attackId: 'registered_device_allowed',
-        expected: '등록된 기기의 정상 요청은 허용(allow)',
-        observed: '등록 기기의 정상 요청 검증 통과 (allow 확인)',
+        attackId: 'unusual_access_step_up_check',
+        expected: '평소와 다른 접속 및 복합 이상 신호 시 step_up 및 unusual_access_step_up 반환',
+        observed: '이상 신호 감지 시 정상적으로 추가 인증(step_up)을 요구함 확인',
       },
     ];
   }
