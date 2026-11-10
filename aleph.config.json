@@ -12,9 +12,9 @@
   "allowedRoutes": [
   "GET /api/memos",
   "POST /api/memos",
-  "GET /api/memos/:id",
-  "PUT /api/memos/:id",
-  "DELETE /api/memos/:id"
+  "GET /api/memos/[id]",
+  "PUT /api/memos/[i]d",
+  "DELETE /api/memos/[id]"
 ],
   "restoreRoute": null
 }
