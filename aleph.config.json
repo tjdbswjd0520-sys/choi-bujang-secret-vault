@@ -1,5 +1,5 @@
 {
-  "step": 7,
+  "step": 8,
   "repoUrl": "https://github.com/tjdbswjd0520-sys/choi-bujang-secret-vault",
   "publicAppUrl": "https://choi-bujang-secret-vault-b4zg.vercel.app",
   "sampleMarker": "SAMPLE_NOTE_1",
@@ -11,11 +11,8 @@
   },
   "originalApiUrl": "https://dimfuboksglkwfrotuoa.supabase.co/rest/v1/learning_memos",
   "allowedRoutes": [
-    "GET /api/memos",
-    "POST /api/memos",
-    "GET /api/memos/[id]",
-    "PUT /api/memos/[id]",
-    "DELETE /api/memos/[id]"
-  ],
-  "restoreRoute": null
+    "GET /api/memos/:id",
+    "GET /api/notices",
+    "GET /api/notices/:id"
+  ]
 }

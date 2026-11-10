@@ -183,3 +183,7 @@ curl -i "$SITE/api/memos"
 ## 7단계 방어 기록: 평소와 다른 접속은 다시 확인합니다
 - **규칙 ID**: `device_registered`, `step_up_required`
 - **동작 요약**: 등록된 기기의 요청 중 평소와 다른 시각, 낯선 네트워크, 대량 읽기 등 복합 이상 신호가 동시 발생할 경우 `step_up` 판정 및 추가 인증(`step_up_required`)을 요구하며, 계약된 검증(`stepUp.verified`) 완료 시 허용합니다.
+
+## 8단계 방어 기록: 자료마다 갈 수 있는 구역을 나눕니다
+- **적용 규칙**: 메모 전체 목록 조회 거부(`GET /api/memos`), 개별 메모/공지 읽기 허용, 공지 및 강사 자료 쓰기/수정 거부(`zone_access_control`)
+- **설정 변경**: `aleph.config.json` 내 `step` 값을 8로 올리고 허용 라우트(`allowedRoutes`) 반영 완료
