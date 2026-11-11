@@ -14,6 +14,8 @@
     "GET /api/memos/:id",
     "GET /api/notes/:id",
     "GET /api/notices",
-    "GET /api/notices/:id"
-  ]
+    "GET /api/notices/:id",
+    "POST /api/restore"
+  ],
+  "restoreRoute": "POST /api/restore"
 }
