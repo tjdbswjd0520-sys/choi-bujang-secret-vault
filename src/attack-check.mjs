@@ -42,7 +42,7 @@ export async function runAttackChecks(config) {
       {
         attackId: 'recapture_operations_room_check',
         expected: '1~11단계 전체 실측 결과 및 41종 시험의 실행·미실행 구분 반영',
-        observed: '탈환 작전실 요약 및 ALEPH SDP 엔진 출처 명시 완료',
+        observed: 'not_run',
       },
     ];
   }
