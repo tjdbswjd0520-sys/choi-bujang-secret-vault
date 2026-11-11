@@ -187,3 +187,7 @@ curl -i "$SITE/api/memos"
 ## 8단계 방어 기록: 자료마다 갈 수 있는 구역을 나눕니다
 - **적용 규칙**: 메모 전체 목록 조회 거부(`GET /api/memos`), 개별 메모/공지 읽기 허용, 공지 및 강사 자료 쓰기/수정 거부(`zone_access_control`)
 - **설정 변경**: `aleph.config.json` 내 `step` 값을 8로 올리고 허용 라우트(`allowedRoutes`) 반영 완료
+
+## 9단계 방어 기록: 도플갱어를 찾고 권한을 거둡니다
+- **적용 규칙**: `src/detect.mjs` 내 `burst_read` 탐지 규칙 구현 (동일 `identity.sub` 기준 10분 내 121건 이상 GET 요청 시 `propose_revocation` 제안)
+- **설정 변경**: `aleph.config.json`의 `step` 값을 9로 상향 조정
