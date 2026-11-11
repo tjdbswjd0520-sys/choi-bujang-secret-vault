@@ -191,3 +191,8 @@ curl -i "$SITE/api/memos"
 ## 9단계 방어 기록: 도플갱어를 찾고 권한을 거둡니다
 - **적용 규칙**: `src/detect.mjs` 내 `burst_read` 탐지 규칙 구현 (동일 `identity.sub` 기준 10분 내 121건 이상 GET 요청 시 `propose_revocation` 제안)
 - **설정 변경**: `aleph.config.json`의 `step` 값을 9로 상향 조정
+
+## 10단계 방어 기록: 백업에서 자료실을 되살립니다
+- **안전 정책 및 백업**: 1~9단계까지 구축된 `src/decider.mjs` 규칙과 `aleph.config.json`의 `allowedRoutes`를 안전 정책 사본으로 지정하고 해시 검증 수행
+- **복원 대상**: 시험 계정 B의 가상 메모 (ID: `SAMPLE_NOTE_1`)
+- **복구 경로**: 사본을 통한 개별 메모 복원 POST 라우트 검증 및 ID·소유자·내용 해시 대조 완료

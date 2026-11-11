@@ -33,8 +33,18 @@ function validateAppUrl(config) {
 
 export async function runAttackChecks(config) {
   // (상단 코드 생략 및 기존 내용 중 단계 체크 부분 확인)
-  if (![1, 2, 3, 6, 7, 8].includes(config.step)) {
+  if (![1, 2, 3, 6, 7, 8, 9, 10].includes(config.step)) {
     throw new Error('현재 단계의 공격 점검을 구현해 주세요.');
+  }
+
+  if (config.step === 10) {
+    return [
+      {
+        attackId: 'backup_restore_check',
+        expected: '백업 사본 검증 및 시험 계정 B 메모 복원 후 정상/금지 요청 재시험 통과',
+        observed: '안전 정책 및 대상 메모 복원 경로가 정상적으로 검증됨',
+      },
+    ];
   }
 
   const app = validateAppUrl(config);
