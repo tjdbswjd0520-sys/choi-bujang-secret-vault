@@ -171,8 +171,39 @@
       }
     }
 
-    function loadSecureMemos() {
-      // 승인 후 기존 자료실 데이터 로딩 로직 수행
+    async function loadSecureMemos() {
+      // 승인 확인 뒤 로그인 세션 토큰으로 서버 자료 요청
+      const session = supabase.auth.getSession ? (await supabase.auth.getSession()).data.session : null;
+      const accessToken = session ? session.access_token : '';
+
+      try {
+        const res = await fetch('/api/memos', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        });
+        
+        if (!res.ok) {
+          throw new Error('자료를 불러오지 못했습니다.');
+        }
+
+        const memos = await res.json();
+        const memoList = document.getElementById('memo-list');
+        memoList.innerHTML = '';
+
+        if (Array.isArray(memos) && memos.length > 0) {
+          memos.forEach(memo => {
+            const li = document.createElement('li');
+            li.innerHTML = `<strong>${memo.title || '제목 없음'}</strong><span>${memo.content || memo.body || ''}</span>`;
+            memoList.appendChild(li);
+          });
+        } else {
+          memoList.innerHTML = '<li><strong>메모가 없습니다</strong><span>등록된 보호 자료가 없습니다.</span></li>';
+        }
+      } catch (err) {
+        const memoList = document.getElementById('memo-list');
+        memoList.innerHTML = `<li><strong>오류 발생</strong><span>${err.message}</span></li>`;
+      }
     }
   </script>
 </body>
