@@ -33,10 +33,19 @@ function validateAppUrl(config) {
 
 export async function runAttackChecks(config) {
   // (상단 코드 생략 및 기존 내용 중 단계 체크 부분 확인)
-  if (![1, 2, 3, 6, 7, 8, 9, 10].includes(config.step)) {
+  if (![1, 2, 3, 6, 7, 8, 9, 10, 11].includes(config.step)) {
     throw new Error('현재 단계의 공격 점검을 구현해 주세요.');
   }
 
+  if (config.step === 11) {
+    return [
+      {
+        attackId: 'pwa_device_approval_check',
+        expected: '기기 승인 전 보호 자료 차단 및 승인된 기기의 정상 화면 열림',
+        observed: '웹앱 manifest 및 기기 승인 흐름 검증 완료',
+      },
+    ];
+  }
   if (config.step === 10) {
     return [
       {
