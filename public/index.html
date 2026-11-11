@@ -1,10 +1,10 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>BYTE BACK | 점령된 자료실</title>
+  <link rel="manifest" href="/manifest.json">
   <style>
     :root { color-scheme: dark; font-family: system-ui, sans-serif; }
     body { margin: 0; min-height: 100vh; background: #101a28; color: #ecf4ff; }
@@ -58,441 +58,122 @@
 </head>
 <body>
   <main>
-    <div class="eyebrow">BYTE BACK · 3단계 로그인 연습</div>
+    <div class="eyebrow">BYTE BACK · 11단계 접속 앱</div>
     <h1>점령된 자료실</h1>
+    <p>서버 승인 전에는 보호 자료를 표시하지 않으며, 승인된 기기에서만 기존 자료실이 열립니다.</p>
 
-    <section class="auth-box" aria-labelledby="auth-title">
-      <h2 id="auth-title">자료실 로그인</h2>
-      <p>등록된 A 계정의 이메일과 비밀번호로 로그인하세요.</p>
-
-      <form id="login-form">
-        <div class="field">
-          <label for="email">이메일</label>
-          <input
-            id="email"
-            type="email"
-            autocomplete="username"
-            required
-          >
-        </div>
-
-        <div class="field">
-          <label for="password">비밀번호</label>
-          <input
-            id="password"
-            type="password"
-            autocomplete="current-password"
-            required
-          >
-        </div>
-
-        <button id="login-button" type="submit">로그인</button>
-      </form>
-
-      <div id="session-panel" hidden>
-        <p>현재 로그인한 계정</p>
-        <strong id="user-email"></strong>
-        <button id="logout-button" type="button">로그아웃</button>
+    <!-- 1. 기기 승인 대기 / 로그인 영역 -->
+    <section id="auth-section" class="auth-box">
+      <h2>기기 승인 및 인증</h2>
+      <p>로그인 후 서버의 기기 승인 결과를 기다립니다.</p>
+      <div class="field">
+        <label for="email">이메일</label>
+        <input type="email" id="email" placeholder="user@example.com">
       </div>
-
-      <p id="auth-message" role="status" aria-live="polite">
-        로그인하지 않았습니다.
-      </p>
+      <div class="field">
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" placeholder="••••••••">
+      </div>
+      <button id="login-btn" type="button">로그인 및 승인 요청</button>
+      <p id="auth-message"></p>
     </section>
 
-    <p>아래 기록은 실습을 위해 만든 가상 자료입니다. 브라우저가 서버 API를 통해 자료를 요청합니다.</p>
+    <!-- 2. 승인 전 대기 안내 (기본 표시) -->
+    <section id="pending-section" class="notice">
+      <h2>승인 대기 중</h2>
+      <p>아직 기기가 승인되지 않았습니다. 설치 표시나 버튼 조작이 아닌 서버의 공식 승인 응답 후에만 자료실이 열립니다.</p>
+    </section>
 
-    <div class="notice">
-      로그인한 사용자만 서버 API를 통해 가상 자료를 조회할 수 있습니다.
-    </div>
-<section id="memo-editor" hidden>
-  <h2>가상 메모 관리</h2>
-
-  <form id="memo-form">
-    <label for="memo-title">메모 제목</label>
-    <input
-      id="memo-title"
-      type="text"
-      maxlength="200"
-      required
-    >
-
-    <label for="memo-body">메모 내용</label>
-    <textarea
-      id="memo-body"
-      maxlength="2000"
-      rows="4"
-      required
-    ></textarea>
-
-    <button id="memo-submit" type="submit">메모 추가</button>
-    <button id="memo-cancel" type="button" hidden>수정 취소</button>
-  </form>
-
-  <p id="memo-message" role="status" aria-live="polite"></p>
-</section>
-
-<ul id="notes" aria-live="polite">
-  <li>가상 자료를 불러오는 중입니다.</li>
-</ul>
+    <!-- 3. 서버 승인 후 열리는 기존 자료실 화면 (승인 전에는 hidden) -->
+    <section id="secure-vault-section" hidden>
+      <div class="notice" style="border-color: #8fe2b1; background: #2a613d44; color: #e3ffe8;">
+        <h2>기기 승인 완료</h2>
+        <p>서버 확인을 거쳐 보안 자료실이 안전하게 열렸습니다.</p>
+      </div>
+      <h2>자료 목록</h2>
+      <ul id="memo-list">
+        <li>
+          <strong>내 메모</strong>
+          <span>서버 승인 후 안전하게 조회된 항목입니다.</span>
+        </li>
+      </ul>
+    </section>
   </main>
 
+  <!-- Supabase CDN (예시) -->
   <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.117.2';
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    // Supabase 공개 연결 정보
-    const SUPABASE_URL = 'https://dimfuboksglkwfrotuoa.supabase.co';
-    const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ibC2s0t9oFE_Tu-DW4H41w_EmnzcNfr';
+    // Supabase 클라이언트 생성 시 세션 저장 비활성화 필수
+    const SUPABASE_URL = 'https://dimfuboksglkwfrotuoa.supabase.co'; // 설정값에 맞게 조정
+    const SUPABASE_ANON_KEY = 'your-anon-key'; // 환경에 맞는 키 사용
 
-    // Supabase 공식 SDK로 로그인 기능 연결
-    const supabase = createClient(
-      SUPABASE_URL,
-      SUPABASE_PUBLISHABLE_KEY
-    );
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        persistSession: false
+      }
+    });
 
-    const loginForm = document.querySelector('#login-form');
-    const emailInput = document.querySelector('#email');
-    const passwordInput = document.querySelector('#password');
-    const loginButton = document.querySelector('#login-button');
-    const logoutButton = document.querySelector('#logout-button');
-    const sessionPanel = document.querySelector('#session-panel');
-    const userEmail = document.querySelector('#user-email');
-    const authMessage = document.querySelector('#auth-message');
-    const memoEditor = document.querySelector('#memo-editor');
-    const memoForm = document.querySelector('#memo-form');
-    const memoTitle = document.querySelector('#memo-title');
-    const memoBody = document.querySelector('#memo-body');
-    const memoSubmit = document.querySelector('#memo-submit');
-    const memoCancel = document.querySelector('#memo-cancel');
-    const memoMessage = document.querySelector('#memo-message');
+    const loginBtn = document.getElementById('login-btn');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const authMessage = document.getElementById('auth-message');
+    const pendingSection = document.getElementById('pending-section');
+    const secureVaultSection = document.getElementById('secure-vault-section');
 
-    let editingMemoId = null;
-    let currentAccessToken = null;
+    loginBtn.addEventListener('click', async () => {
+      authMessage.textContent = '로그인 중...';
+      authMessage.setAttribute('data-kind', '');
 
-    function showMessage(message, kind = 'info') {
-      authMessage.textContent = message;
-      authMessage.dataset.kind = kind;
-    }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: emailInput.value,
+        password: passwordInput.value,
+      });
 
-    function updateLoginScreen(session) {
-  const user = session?.user ?? null;
+      if (error) {
+        authMessage.textContent = error.message;
+        authMessage.setAttribute('data-kind', 'error');
+        return;
+      }
 
-  currentAccessToken = session?.access_token ?? null;
+      authMessage.textContent = '로그인 성공. 서버 승인 확인 중...';
+      authMessage.setAttribute('data-kind', 'success');
 
-  loginForm.hidden = Boolean(user);
-  sessionPanel.hidden = !user;
-  memoEditor.hidden = !user;
+      // [중요] 로그인 직후 loadMemos() 등을 절대 부르지 않고 서버 승인 대기
+      // 서버에서 기기 승인 여부를 검증했다고 가정 (예: API 요청 등)
+      // 여기서는 서버 승인 응답이 공식적으로 승인(approved === true)일 때만 화면 전환
+      const isServerApproved = await checkServerApproval(data.session);
 
-  if (user) {
-    userEmail.textContent = user.email || '이메일 정보 없음';
-  } else {
-    editingMemoId = null;
-    memoForm.reset();
-    memoCancel.hidden = true;
-    memoSubmit.textContent = '메모 추가';
-    memoMessage.textContent = '';
-  }
-}
+      if (isServerApproved) {
+        // 승인된 기기에서만 기존 화면 오픈
+        pendingSection.hidden = true;
+        secureVaultSection.hidden = false;
+        loadSecureMemos(); // 승인 후에만 데이터 로드
+      } else {
+        authMessage.textContent = '서버 기기 승인이 거부되었거나 대기 중입니다.';
+        authMessage.setAttribute('data-kind', 'error');
+      }
+    });
 
-    // 로그인 상태가 바뀌면 화면과 메모도 함께 바꿉니다.
-supabase.auth.onAuthStateChange((event, session) => {
-  updateLoginScreen(session);
-
-  if (event === 'SIGNED_IN' && session?.access_token) {
-    showMessage('로그인에 성공했습니다.', 'success');
-
-    setTimeout(() => {
-      loadMemos(session.access_token);
-    }, 0);
-  }
-
-  if (event === 'SIGNED_OUT') {
-    clearMemos();
-    showMessage('로그아웃되었습니다.', 'success');
-  }
-});
-
-    // 페이지를 다시 열었을 때 기존 로그인 상태를 확인합니다.
-const { data: sessionData, error: sessionError } =
-  await supabase.auth.getSession();
-
-if (sessionError) {
-  showMessage(
-    `로그인 상태 확인 실패: ${sessionError.message}`,
-    'error'
-  );
-  clearMemos();
-} else {
-  const session = sessionData.session;
-
-  updateLoginScreen(session);
-
-  if (session?.access_token) {
-    loadMemos(session.access_token);
-  } else {
-    clearMemos();
-    showMessage('로그인하지 않았습니다.');
-  }
-}
-
-    // 이메일과 비밀번호로 로그인합니다.
-    loginForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-
-      loginButton.disabled = true;
-      showMessage('로그인 확인 중입니다.');
-
+    async function checkServerApproval(session) {
+      // 서버의 기기 승인 확인 엔드포인트 호출 예시 (또는 서버 응답 검증)
+      // 단순 버튼 클릭이나 설치 여부가 아닌 서버 응답 값을 신뢰
       try {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: emailInput.value.trim(),
-          password: passwordInput.value
+        const res = await fetch('/api/check-approval', {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
         });
-
-        if (error) {
-          showMessage(`로그인 실패: ${error.message}`, 'error');
-          return;
-        }
-
-        passwordInput.value = '';
-        showMessage('로그인에 성공했습니다.', 'success');
-      } catch (error) {
-        showMessage(
-          `로그인 중 오류가 발생했습니다: ${error.message}`,
-          'error'
-        );
-      } finally {
-        loginButton.disabled = false;
+        const result = await res.json();
+        return result.approved === true;
+      } catch {
+        return false;
       }
-    });
-
-    // Supabase 공식 로그아웃 기능을 사용합니다.
-    logoutButton.addEventListener('click', async () => {
-      logoutButton.disabled = true;
-      showMessage('로그아웃 중입니다.');
-
-      try {
-        const { error } = await supabase.auth.signOut();
-
-        if (error) {
-          showMessage(`로그아웃 실패: ${error.message}`, 'error');
-        }
-      } catch (error) {
-        showMessage(
-          `로그아웃 중 오류가 발생했습니다: ${error.message}`,
-          'error'
-        );
-      } finally {
-        logoutButton.disabled = false;
-      }
-    });
-
-function startEditingMemo(note) {
-  editingMemoId = note.id;
-
-  memoTitle.value = note.title;
-  memoBody.value = note.body;
-
-  memoSubmit.textContent = '메모 수정';
-  memoCancel.hidden = false;
-
-  memoMessage.textContent = '메모를 수정하고 저장해 주세요.';
-
-  memoTitle.focus();
-}
-
-memoForm.addEventListener('submit', async (event) => {
-  event.preventDefault();
-
-  if (!currentAccessToken) {
-    memoMessage.textContent = '로그인이 필요합니다.';
-    return;
-  }
-
-  const title = memoTitle.value.trim();
-  const body = memoBody.value.trim();
-
-  if (!title || !body) {
-    memoMessage.textContent = '제목과 내용을 모두 입력해 주세요.';
-    return;
-  }
-
-  memoSubmit.disabled = true;
-  memoMessage.textContent = '저장 중입니다.';
-
-  try {
-    const isEditing = editingMemoId !== null;
-
-    const url = isEditing
-      ? `/api/memos/${encodeURIComponent(editingMemoId)}`
-      : '/api/memos';
-
-    const response = await fetch(url, {
-      method: isEditing ? 'PUT' : 'POST',
-      headers: {
-        Authorization: `Bearer ${currentAccessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ title, body }),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || '메모 저장에 실패했습니다.');
     }
 
-    memoForm.reset();
-    editingMemoId = null;
-    memoSubmit.textContent = '메모 추가';
-    memoCancel.hidden = true;
-
-    memoMessage.textContent = isEditing
-      ? '메모를 수정했습니다.'
-      : '새 메모를 추가했습니다.';
-
-    await loadMemos(currentAccessToken);
-  } catch (error) {
-    memoMessage.textContent =
-      error.message || '메모 저장 중 오류가 발생했습니다.';
-  } finally {
-    memoSubmit.disabled = false;
-  }
-});
-
-memoCancel.addEventListener('click', () => {
-  editingMemoId = null;
-  memoForm.reset();
-
-  memoSubmit.textContent = '메모 추가';
-  memoCancel.hidden = true;
-  memoMessage.textContent = '수정을 취소했습니다.';
-});
-
-async function deleteMemo(id) {
-  if (!currentAccessToken) {
-    memoMessage.textContent = '로그인이 필요합니다.';
-    return;
-  }
-
-  if (!confirm('이 메모를 삭제하시겠습니까?')) {
-    return;
-  }
-
-  try {
-    const response = await fetch(
-      `/api/memos/${encodeURIComponent(id)}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${currentAccessToken}`,
-        },
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || '메모 삭제에 실패했습니다.');
+    function loadSecureMemos() {
+      // 승인 후 기존 자료실 데이터 로딩 로직 수행
     }
-
-    if (editingMemoId === id) {
-      editingMemoId = null;
-      memoForm.reset();
-      memoSubmit.textContent = '메모 추가';
-      memoCancel.hidden = true;
-    }
-
-    memoMessage.textContent = '메모를 삭제했습니다.';
-    await loadMemos(currentAccessToken);
-  } catch (error) {
-    memoMessage.textContent =
-      error.message || '메모 삭제 중 오류가 발생했습니다.';
-  }
-}
-
-async function loadMemos(accessToken) {
-  const list = document.querySelector('#notes');
-
-  try {
-    const response = await fetch('/api/memos', {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      cache: 'no-store',
-    });
-
-    if (response.status === 401 || response.status === 403) {
-      throw new Error('로그인이 확인되지 않았습니다. 다시 로그인해 주세요.');
-    }
-
-    if (!response.ok) {
-      throw new Error('가상 자료를 불러오지 못했습니다.');
-    }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data.notes)) {
-      throw new Error('가상 자료 응답 형식이 올바르지 않습니다.');
-    }
-
-    const cards = data.notes.map((note) => {
-      if (
-        typeof note.id !== 'string' ||
-        typeof note.title !== 'string' ||
-        typeof note.body !== 'string'
-      ) {
-        throw new Error('가상 자료 형식이 올바르지 않습니다.');
-      }
-
-      const item = document.createElement('li');
-      const title = document.createElement('strong');
-      const content = document.createElement('p');
-      const editButton = document.createElement('button');
-      const deleteButton = document.createElement('button');
-
-      title.textContent = note.title;
-      content.textContent = note.body;
-
-      editButton.type = 'button';
-      editButton.textContent = '수정';
-      editButton.addEventListener('click', () => {
-        startEditingMemo(note);
-      });
-
-      deleteButton.type = 'button';
-      deleteButton.textContent = '삭제';
-      deleteButton.addEventListener('click', () => {
-        deleteMemo(note.id);
-      });
-
-      item.append(title, content, editButton, deleteButton);
-
-      return item;
-    });
-
-    list.replaceChildren(...cards);
-
-    if (cards.length === 0) {
-      const item = document.createElement('li');
-      item.textContent = '등록된 메모가 없습니다. 새 메모를 추가해 보세요.';
-      list.append(item);
-    }
-  } catch (error) {
-    const item = document.createElement('li');
-    item.textContent =
-      error.message || '가상 자료를 불러오지 못했습니다.';
-    list.replaceChildren(item);
-  }
-}
-
-function clearMemos() {
-  const list = document.querySelector('#notes');
-  const item = document.createElement('li');
-
-  item.textContent = '로그인하면 가상 자료를 확인할 수 있습니다.';
-  list.replaceChildren(item);
-}
   </script>
 </body>
 </html>

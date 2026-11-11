@@ -1,0 +1,9 @@
+{
+  "name": "최부장 비밀 자료실",
+  "short_name": "비밀자료실",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "description": "오프라인 안내 및 기기 승인 기반 안전한 접속 앱"
+}
